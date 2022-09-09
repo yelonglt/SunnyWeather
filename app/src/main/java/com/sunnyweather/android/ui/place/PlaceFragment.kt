@@ -9,18 +9,19 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.*
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.sunnyweather.android.MainActivity
-import com.sunnyweather.android.R
+import com.sunnyweather.android.databinding.FragmentPlaceBinding
 import com.sunnyweather.android.extend.textWatcherFlow
 import com.sunnyweather.android.ui.weather.WeatherActivity
-import kotlinx.android.synthetic.main.fragment_place.*
 
 class PlaceFragment : Fragment() {
 
     val viewModel: PlaceViewModel by viewModels()
-
+    private lateinit var binding: FragmentPlaceBinding
     private lateinit var adapter: PlaceAdapter
 
     override fun onAttach(context: Context) {
@@ -38,8 +39,9 @@ class PlaceFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_place, container, false)
+    ): View {
+        binding = FragmentPlaceBinding.inflate(inflater)
+        return binding.root
     }
 
     private fun onActivityCreated() {
@@ -55,26 +57,26 @@ class PlaceFragment : Fragment() {
             return
         }
         val layoutManager = LinearLayoutManager(activity)
-        recyclerView.layoutManager = layoutManager
+        binding.recyclerView.layoutManager = layoutManager
         adapter = PlaceAdapter(this, viewModel.placeList)
-        recyclerView.adapter = adapter
+        binding.recyclerView.adapter = adapter
         lifecycleScope.launchWhenCreated {
-            searchPlaceEdit.textWatcherFlow().collect {
+            binding.searchPlaceEdit.textWatcherFlow().collect {
                 if (it.isNotEmpty()) {
                     viewModel.searchPlaces(it)
                 } else {
-                    recyclerView.visibility = View.GONE
-                    bgImageView.visibility = View.VISIBLE
+                    binding.recyclerView.visibility = View.GONE
+                    binding.bgImageView.visibility = View.VISIBLE
                     adapter.notifyItemRangeRemoved(0, viewModel.placeList.size)
                     viewModel.placeList.clear()
                 }
             }
         }
-        viewModel.placeLiveData.observe(viewLifecycleOwner, Observer { result ->
+        viewModel.placeLiveData.observe(viewLifecycleOwner) { result ->
             val places = result.getOrNull()
             if (places != null) {
-                recyclerView.visibility = View.VISIBLE
-                bgImageView.visibility = View.GONE
+                binding.recyclerView.visibility = View.VISIBLE
+                binding.bgImageView.visibility = View.GONE
                 viewModel.placeList.clear()
                 viewModel.placeList.addAll(places)
                 adapter.notifyItemRangeChanged(0, viewModel.placeList.size)
@@ -82,7 +84,7 @@ class PlaceFragment : Fragment() {
                 Toast.makeText(activity, "未能查询到任何地点", Toast.LENGTH_SHORT).show()
                 result.exceptionOrNull()?.printStackTrace()
             }
-        })
+        }
     }
 
 }
